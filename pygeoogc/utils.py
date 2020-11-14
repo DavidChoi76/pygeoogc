@@ -23,7 +23,7 @@ from defusedxml import cElementTree as etree
 from requests import Response, Session
 from requests.adapters import HTTPAdapter
 from requests.exceptions import RequestException
-from shapely.geometry import LineString, Point, Polygon, box
+from shapely.geometry import LineString, MultiPolygon, Point, Polygon, box
 from shapely.ops import transform
 from urllib3 import Retry
 
@@ -79,10 +79,11 @@ class RetrySession:
         self,
         url: str,
         payload: Optional[Mapping[str, Any]] = None,
+        headers: Optional[MutableMapping[str, Any]] = None,
     ) -> Response:
         """Retrieve data from a url by GET and return the Response."""
         try:
-            return self.session.get(url, params=payload)
+            return self.session.get(url, params=payload, headers=headers)
         except (ConnectionError, RequestException):
             raise ConnectionError(f"Connection failed after {self.retries} retries.")
 
@@ -90,10 +91,11 @@ class RetrySession:
         self,
         url: str,
         payload: Optional[MutableMapping[str, Any]] = None,
+        headers: Optional[MutableMapping[str, Any]] = None,
     ) -> Response:
         """Retrieve data from a url by POST and return the Response."""
         try:
-            return self.session.post(url, data=payload)
+            return self.session.post(url, data=payload, headers=headers)
         except (ConnectionError, RequestException):
             raise ConnectionError(f"Connection failed after {self.retries} retries.")
 
@@ -287,8 +289,8 @@ class MatchCRS:
     """
 
     @staticmethod
-    def geometry(geom: Polygon, in_crs: str, out_crs: str) -> Polygon:
-        if not isinstance(geom, Polygon):
+    def geometry(geom: Union[Polygon, MultiPolygon], in_crs: str, out_crs: str) -> Polygon:
+        if not isinstance(geom, (Polygon, MultiPolygon)):
             raise InvalidInputType("geom", "Polygon")
 
         project = pyproj.Transformer.from_crs(in_crs, out_crs, always_xy=True).transform
